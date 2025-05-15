@@ -1,0 +1,123 @@
+Step 1 Create a test Deployment.
+[root@k8smaster1 hpa]# cat > nginx-hpa.yaml <<EOF
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: nginx-hpa
+ labels:
+ app: nginx
+spec:
+ replicas: 2
+ selector:
+ matchLabels:
+ app: nginx
+ template:
+ metadata:
+ labels:
+ app: nginx
+ spec:
+ containers:
+ - name: nginx-hpa
+ image: nginx
+ ports:
+ - containerPort: 80
+ resources:
+ requests:
+ cpu: 100m
+EOF
+[root@k8smaster1 hpa]# kubectl apply -f nginx-hpa.yaml
+Step 2 Create an HPA.
+[root@k8smaster1 hpa]# kubectl autoscale deployment nginx-hpa --cpu-percent=10 --min=1 --
+max=10
+Step 3 Check the HPA status.
+[root@k8smaster1 hpa]# kubectl get hpa
+
+
+The default collection period of the Metrics Server is 1 minute. After scale-out or update
+is complete, the Metrics Server cannot obtain monitoring data for a period of time. Wait
+1 minute and view the monitoring data.
+[root@k8smaster1 hpa]# kubectl describe hpa nginx
+
+Step 4 Perform scale-out to increase loads.
+View the IP addresses of the pods.
+[root@k8smaster1 hpa]# kubectl get pods -o wide
+
+
+
+
+Access the pods from other nodes cyclically. Replace the IP address in the following
+command with the actual IP address queried in the preceding step. Before running the
+command, ensure that wget has been installed on the node.
+[root@k8smaster2 ~]# while true;do wget -q -O- http://10.99.63.219 > /dev/null;done
+
+Step 5 View HPA results.
+Check the HPA. The CPU utilization increases by more than 10%.
+[root@k8smaster1 hpa]# kubectl get hpa
+
+
+
+Check the scale-out status.
+[root@k8smaster1 hpa]# kubectl get pods
+
+
+View HPA details.
+[root@k8smaster1 hpa]# kubectl describe hpa nginx-hpa
+
+
+
+Step 6 Perform scale-in to decrease loads.
+Stop cyclically accessing the pods and check the HPA. The CPU utilization decreases to 0.
+[root@k8smaster1 hpa]# kubectl get hpa
+
+
+
+The default timeout interval for scale-in is 5 minutes. After the scale-in times out, check
+the HPA results again. The number of pods decreases to 1.
+[root@k8smaster1 hpa]# kubectl get pods -o wide
+
+
+
+View HPA details.
+[root@k8smaster1 hpa]# kubectl describe hpa nginx-hpa
+
+
+
+
+Step 7 Create an HPA based on an absolute value metric.
+Create an HPA and set an absolute value metric.
+[root@k8smaster1 hpa]# cat > hpa-test.yaml <<EOF
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+ name: hpa-test
+spec:
+ scaleTargetRef:
+ apiVersion: apps/v1
+ kind: Deployment
+ name: nginx-hpa
+ minReplicas: 1
+ maxReplicas: 10
+ metrics:
+ - type: Resource
+ resource:
+ name: cpu
+ target:
+ type: AverageValue
+ averageValue: 10
+EOF
+[root@k8smaster1 hpa]# kubectl apply -f hpa-test.yaml
+
+
+Perform step 4 to increase loads and check the HPA results.
+[root@k8smaster1 hpa]# kubectl get hpa
+[root@k8smaster1 hpa]# kubectl get pods -o wide
+
+Step 8 Clear the environment.
+Stop the loads, and delete the HPA and test Deployment.
+[root@k8smaster1 hpa]# kubectl delete hpa hpa-test
+[root@k8smaster1 hpa]# kubectl delete hpa nginx-hpa
+[root@k8smaster1 hpa]# kubectl delete -f nginx-hpa.yaml
+
+
+
+
