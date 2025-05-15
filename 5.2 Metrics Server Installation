@@ -1,0 +1,12 @@
+Step 1 Create a working directory.
+Run the following commands on the k8smaster1 node:
+[root@k8smaster1 ~]# mkdir hpa
+[root@k8smaster1 ~]# cd hpa
+[root@k8smaster1 hpa]#
+Step 2 Obtain the YAML file.
+Run the following command to download metrics-server:
+[root@k8smaster1 hpa]# git clone https://gitee.com/yftyxa/metrics-server.git
+Step 3 Install a Metrics Server.
+[root@k8smaster1 hpa]# kubectl apply -f metrics-server/metrics-server.yaml
+Check the running status of the Metrics Server.
+[root@k8smaster1 hpa]# kubectl get pods -n kube-system
